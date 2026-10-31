@@ -1,0 +1,55 @@
+Project Title: 180-Day Weight Change Simulation
+
+Project Overview:
+My project will simulate the weight changes of an adult man over 180 days. The
+program will begin with a starting weight and process one daily record during
+each time period. Every record will contain the day's calorie intake and
+calories burned. The simulation will use the difference between these values to
+estimate a daily weight change. It will show the man's initial weight, progress
+through six 30-day phases, and estimated weight after day 180.
+
+This will be a simplified educational simulation, not a medical prediction or
+health recommendation. Real weight change is affected by many factors that are
+outside the scope of this project.
+
+Implementation:
+The program's main data structure will be a std::map. Each map key will identify
+one 30-day phase, such as "Phase 1: Days 1-30." Each map value will be a
+std::array containing three std::lists of DailyRecord objects. The list at index
+0 will store calorie-deficit days, index 1 will store balanced days, and index 2
+will store calorie-surplus days. Each DailyRecord will contain the day number,
+calories eaten, calories burned, calorie balance, and estimated ending weight.
+The structure will have this form:
+
+std::map<std::string, std::array<std::list<DailyRecord>, 3>> weightHistory;
+
+The simulation will retrieve its data from an external comma-separated file
+containing at least 180 lines, one for each day. Each line will contain the day
+number, calories eaten, and calories burned. The program will validate each
+record before using it and will assign days 1-30 to phase 1, days 31-60 to phase
+2, and so on through phase 6.
+
+Simulation:
+One time period will represent one day, so the program will simulate 180 time
+periods. For each day, the program will subtract calories burned from calories
+eaten to find the daily calorie balance. For this classroom model, it will
+estimate the weight change by dividing that balance by 3,500 calories per pound.
+A negative balance will produce an estimated loss, while a positive balance will
+produce an estimated gain. The result will be added to the previous day's
+weight to produce the new estimated weight.
+
+A day with a balance below -100 calories will be placed in the deficit list. A
+balance from -100 through 100 will be placed in the balanced list, and a balance
+above 100 will be placed in the surplus list. These thresholds keep small daily
+variations in the balanced category. At the start, the driver will print the
+man's initial weight. After processing the data, it will neatly display the map,
+including the three lists for every phase, and show the estimated weight after
+30, 60, 90, 120, 150, and 180 days. It will finish with the final estimated
+weight and totals for deficit, balanced, and surplus days.
+
+Planned Functions:
+The completed program will use functions to load and validate the external data,
+calculate a day's estimated weight change, classify the calorie balance, select
+the correct 30-day phase, simulate all 180 days, and display the map. Separating
+these jobs into functions will make the calculations, file processing, and
+formatted output easier to understand and test.

@@ -1,0 +1,68 @@
+Beta Maintenance Bug Log - Progress Save 7
+
+I finished the display and tested totals across all six phases. The beta
+maintenance log now contains all ten bugs and their corrections.
+
+1. Weight changes were always zero for small calorie balances
+
+While testing calculateWeightChange(), I originally divided two integers. A
+balance such as 350 calories returned 0 instead of 0.1. I corrected the
+calculation by dividing by 3500.0 so C++ uses floating-point division.
+
+2. The -100 calorie boundary was put in the wrong category
+
+My first condition used balance <= -100 for a deficit. The project definition
+says -100 through 100 is balanced, so the -100 test failed. I changed the
+deficit condition to balance < -100 and kept the balanced condition at
+balance <= 100.
+
+3. Day 30 was assigned to phase 2
+
+I first calculated the phase with day / 30 + 1. That made day 30 start the
+second phase. I changed the formula to (day - 1) / 30 + 1 and added tests for
+days 30, 31, 60, and 61.
+
+4. Invalid day numbers created an extra map entry
+
+Days 0 and 181 were passed to the phase function and could become keys in the
+map. I added a range check before inserting a record. The phase function now
+returns "Invalid day" when the day is outside 1 through 180.
+
+5. A malformed input line was partly accepted
+
+The first CSV reader checked only whether three values could be read. A line
+with missing fields or extra text could still get through. I split each line
+into exactly three fields, converted each complete field, and rejected the
+record if conversion failed or extra data remained.
+
+6. Duplicate days were counted as separate simulation days
+
+Two records with the same day number passed the first version because the
+program only checked the total number of records. I added a 180-element seen
+array and reject a record when its day has already been marked as seen.
+
+7. An out-of-order input file produced the wrong running weight
+
+The simulation originally processed records in file order. When I moved day 4
+above day 3 in the test file, the displayed daily weights were out of order. I
+sorted the validated records by day before starting the simulation.
+
+8. A missing day was not reported clearly
+
+The loader could finish with fewer than 180 valid records but only displayed a
+general loading error. I added a final check for every day from 1 through 180
+and report the first missing day so the input file is easier to correct.
+
+9. Each daily weight was calculated from the starting weight
+
+In an early simulation loop, endingWeight was reset from startingWeight for
+every record. This prevented weight changes from accumulating across days. I
+created one runningWeight variable outside the loop and update it after each
+daily calorie balance.
+
+10. Category totals reset at the beginning of every phase
+
+I declared the deficit, balanced, and surplus counters inside the phase display
+loop, so the final totals only described the last phase. I moved all three
+counters outside that loop and increment them while visiting every stored
+record.

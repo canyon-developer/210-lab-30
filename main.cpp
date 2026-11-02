@@ -1,13 +1,19 @@
+// Progress save 7: complete beta release
 // Project: 180-Day Weight Change Simulation
-// This file is a pseudocode framework and a small working mockup.
-// The calculation is a simplified classroom model, not medical advice.
+// Beta release
 
+#include <algorithm>
 #include <array>
+#include <cctype>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <list>
 #include <map>
+#include <sstream>
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -19,41 +25,134 @@ struct DailyRecord {
     double endingWeight;
 };
 
-// The three list indexes classify each day's calorie balance.
 const int DEFICIT = 0;
 const int BALANCED = 1;
 const int SURPLUS = 2;
 const int CATEGORY_COUNT = 3;
+const int SIMULATION_DAYS = 180;
+const int DAYS_PER_PHASE = 30;
+const double CALORIES_PER_POUND = 3500.0;
 
 using DayLists = array<list<DailyRecord>, CATEGORY_COUNT>;
 using WeightMap = map<string, DayLists>;
 
-// PSEUDOCODE FOR THE COMPLETED loadDailyData FUNCTION:
-// Open the external comma-separated data file.
-// If the file cannot be opened, print an error and report failure.
-// Read at least 180 lines containing day, calories eaten, and calories burned.
-// Split each line into fields and confirm that the values are valid numbers.
-// Reject duplicate days and records outside the range from day 1 to day 180.
-// Store the validated input records so they can be processed in day order.
-// Close the file and return whether all 180 required days were loaded.
-
-// PSEUDOCODE FOR THE COMPLETED getPhaseName FUNCTION:
-// Receive a day number from 1 through 180.
-// Convert days 1-30 to phase 1, days 31-60 to phase 2, and so on.
-// Return a descriptive map key such as "Phase 1: Days 1-30."
-
-// Return one phase name to demonstrate passing a value into a function.
-string getMockPhaseName(int day) {
-    if (day <= 30) {
-        return "Phase 1: Days 1-30";
+string trim(const string& value) {
+    size_t first = 0;
+    while (first < value.size() &&
+           isspace(static_cast<unsigned char>(value[first]))) {
+        ++first;
     }
-    return "Later Phase";
+
+    size_t last = value.size();
+    while (last > first &&
+           isspace(static_cast<unsigned char>(value[last - 1]))) {
+        --last;
+    }
+    return value.substr(first, last - first);
 }
 
-// PSEUDOCODE FOR THE COMPLETED classifyBalance FUNCTION:
-// If the balance is below -100, return the DEFICIT index.
-// If the balance is no more than 100, return the BALANCED index.
-// Otherwise, return the SURPLUS index.
+bool parseInteger(const string& text, int& value) {
+    string cleaned = trim(text);
+    if (cleaned.empty()) {
+        return false;
+    }
+
+    try {
+        size_t used = 0;
+        long long parsed = stoll(cleaned, &used);
+        if (used != cleaned.size() ||
+            parsed < numeric_limits<int>::min() ||
+            parsed > numeric_limits<int>::max()) {
+            return false;
+        }
+        value = static_cast<int>(parsed);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+bool parseDailyRecord(const string& line, DailyRecord& record) {
+    if (count(line.begin(), line.end(), ',') != 2) {
+        return false;
+    }
+
+    stringstream input(line);
+    string dayText;
+    string eatenText;
+    string burnedText;
+
+    if (!getline(input, dayText, ',') ||
+        !getline(input, eatenText, ',') ||
+        !getline(input, burnedText)) {
+        return false;
+    }
+
+    if (!parseInteger(dayText, record.day) ||
+        !parseInteger(eatenText, record.caloriesEaten) ||
+        !parseInteger(burnedText, record.caloriesBurned)) {
+        return false;
+    }
+
+    record.calorieBalance = 0;
+    record.endingWeight = 0.0;
+    return true;
+}
+
+bool loadDailyData(const string& filename, vector<DailyRecord>& records) {
+    ifstream input(filename);
+    if (!input) {
+        cerr << "Error: could not open " << filename << ".\n";
+        return false;
+    }
+
+    vector<DailyRecord> loaded;
+    array<bool, SIMULATION_DAYS + 1> seen{};
+    string line;
+    int lineNumber = 0;
+
+    while (getline(input, line)) {
+        ++lineNumber;
+        DailyRecord record{};
+
+        if (!parseDailyRecord(line, record)) {
+            cerr << "Error: malformed data on line " << lineNumber << ".\n";
+            return false;
+        }
+        if (record.day < 1 || record.day > SIMULATION_DAYS) {
+            cerr << "Error: day " << record.day
+                 << " is outside the range 1-" << SIMULATION_DAYS << ".\n";
+            return false;
+        }
+        if (record.caloriesEaten < 0 || record.caloriesBurned < 0) {
+            cerr << "Error: calorie values cannot be negative on line "
+                 << lineNumber << ".\n";
+            return false;
+        }
+        if (seen[record.day]) {
+            cerr << "Error: duplicate record for day " << record.day << ".\n";
+            return false;
+        }
+
+        seen[record.day] = true;
+        loaded.push_back(record);
+    }
+
+    for (int day = 1; day <= SIMULATION_DAYS; ++day) {
+        if (!seen[day]) {
+            cerr << "Error: input is missing day " << day << ".\n";
+            return false;
+        }
+    }
+
+    sort(loaded.begin(), loaded.end(),
+         [](const DailyRecord& left, const DailyRecord& right) {
+             return left.day < right.day;
+         });
+
+    records = loaded;
+    return true;
+}
 
 int classifyBalance(int balance) {
     if (balance < -100) {
@@ -65,94 +164,110 @@ int classifyBalance(int balance) {
     return SURPLUS;
 }
 
-// PSEUDOCODE FOR THE COMPLETED calculateWeightChange FUNCTION:
-// Receive the calorie balance for one day.
-// Divide the balance by 3,500 calories per pound.
-// Return the estimated weight change for the classroom simulation.
-
 double calculateWeightChange(int calorieBalance) {
-    return calorieBalance / 3500.0;
+    return calorieBalance / CALORIES_PER_POUND;
 }
 
-// Add one dummy record so the wireframe demonstrates the nested structure.
-void loadMockData(WeightMap& history, double startingWeight) {
-    DailyRecord sample = {1, 2200, 2500, 0, startingWeight};
-    sample.calorieBalance = sample.caloriesEaten - sample.caloriesBurned;
-    sample.endingWeight += calculateWeightChange(sample.calorieBalance);
+string getPhaseName(int day) {
+    if (day < 1 || day > SIMULATION_DAYS) {
+        return "Invalid day";
+    }
 
-    int category = classifyBalance(sample.calorieBalance);
-    string phase = getMockPhaseName(sample.day);
-    history[phase][category].push_back(sample);
+    int phase = (day - 1) / DAYS_PER_PHASE + 1;
+    int firstDay = (phase - 1) * DAYS_PER_PHASE + 1;
+    int lastDay = phase * DAYS_PER_PHASE;
 
-    cout << "Mock loader passed one DailyRecord into the weight map.\n";
+    return "Phase " + to_string(phase) + ": Days " +
+           to_string(firstDay) + "-" + to_string(lastDay);
 }
 
-// PSEUDOCODE FOR THE COMPLETED simulateWeightChanges FUNCTION:
-// Begin with the man's starting weight.
-// Process the 180 validated input records in day-number order.
-// For each daily record:
-//     Subtract calories burned from calories eaten.
-//     Divide the balance by 3,500 to estimate that day's weight change.
-//     Add the change to the previous estimated weight.
-//     Determine the correct 30-day phase name.
-//     Classify the day as deficit, balanced, or surplus.
-//     Insert the completed record into the correct map, array, and list.
-//     At the end of each phase, print the current estimated weight.
-// Return the estimated weight after day 180.
+double simulateWeightChanges(const vector<DailyRecord>& inputRecords,
+                             double startingWeight,
+                             WeightMap& history,
+                             array<double, 6>& phaseWeights) {
+    history.clear();
+    phaseWeights.fill(startingWeight);
+    double runningWeight = startingWeight;
 
-// PSEUDOCODE FOR THE COMPLETED displayHistory FUNCTION:
-// Print the man's initial weight.
-// Visit each 30-day phase in the map.
-// Visit the deficit, balanced, and surplus lists in the phase's array.
-// Print each record's day, calorie values, balance, and estimated weight.
-// Count and print the number of days in each category.
-// Print the final estimated weight after day 180.
+    for (DailyRecord record : inputRecords) {
+        record.calorieBalance =
+            record.caloriesEaten - record.caloriesBurned;
+        runningWeight += calculateWeightChange(record.calorieBalance);
+        record.endingWeight = runningWeight;
 
-// Display enough information to verify that the map, array, and lists work.
-void displayMockHistory(const WeightMap& history, double startingWeight) {
+        string phase = getPhaseName(record.day);
+        int category = classifyBalance(record.calorieBalance);
+        history[phase][category].push_back(record);
+
+        if (record.day % DAYS_PER_PHASE == 0) {
+            phaseWeights[record.day / DAYS_PER_PHASE - 1] = runningWeight;
+        }
+    }
+
+    return runningWeight;
+}
+
+void displayHistory(const WeightMap& history,
+                    double startingWeight,
+                    const array<double, 6>& phaseWeights,
+                    double finalWeight) {
     const array<string, CATEGORY_COUNT> labels = {
         "Deficit", "Balanced", "Surplus"
     };
+    array<int, CATEGORY_COUNT> totals{};
 
     cout << fixed << setprecision(2);
-    cout << "\nInitial weight: " << startingWeight << " pounds\n";
+    cout << "Initial weight: " << startingWeight << " pounds\n";
 
     for (const auto& phase : history) {
         cout << "\n" << phase.first << "\n";
         for (int category = 0; category < CATEGORY_COUNT; ++category) {
-            cout << "  " << labels[category] << " days: ";
+            cout << "  " << labels[category] << " days:\n";
+
             if (phase.second[category].empty()) {
-                cout << "none";
-            } else {
-                for (const DailyRecord& record : phase.second[category]) {
-                    cout << "day " << record.day
-                         << " (balance " << record.calorieBalance
-                         << ", weight " << record.endingWeight << ") ";
-                }
+                cout << "    none\n";
+                continue;
             }
-            cout << "\n";
+
+            for (const DailyRecord& record : phase.second[category]) {
+                cout << "    Day " << setw(3) << record.day
+                     << ": eaten " << record.caloriesEaten
+                     << ", burned " << record.caloriesBurned
+                     << ", balance " << showpos << record.calorieBalance
+                     << noshowpos << ", weight " << record.endingWeight
+                     << "\n";
+                ++totals[category];
+            }
         }
     }
+
+    cout << "\n30-day progress:\n";
+    for (size_t phase = 0; phase < phaseWeights.size(); ++phase) {
+        cout << "  Day " << (phase + 1) * DAYS_PER_PHASE
+             << ": " << phaseWeights[phase] << " pounds\n";
+    }
+
+    cout << "\nFinal estimated weight: " << finalWeight << " pounds\n";
+    cout << "Category totals:\n";
+    cout << "  Deficit days: " << totals[DEFICIT] << "\n";
+    cout << "  Balanced days: " << totals[BALANCED] << "\n";
+    cout << "  Surplus days: " << totals[SURPLUS] << "\n";
 }
 
-int main() {
-    // PSEUDOCODE FOR THE COMPLETED DRIVER:
-    // Set the man's initial weight.
-    // Declare the map whose values are arrays of three DailyRecord lists.
-    // Load and validate 180 records from the external file.
-    // Stop with an error if the file or its data is invalid.
-    // Display the initial state before processing any daily records.
-    // Call the simulation function for all 180 daily time periods.
-    // Neatly display every phase and category stored in the map.
-    // Display weights after days 30, 60, 90, 120, 150, and 180.
-    // Display the final estimated weight and category totals.
+int main(int argc, char* argv[]) {
+    const string filename = argc > 1 ? argv[1] : "daily_data.csv";
+    const double startingWeight = 200.0;
 
-    double startingWeight = 200.0;
+    vector<DailyRecord> records;
+    if (!loadDailyData(filename, records)) {
+        return 1;
+    }
+
     WeightMap weightHistory;
+    array<double, 6> phaseWeights{};
+    double finalWeight = simulateWeightChanges(
+        records, startingWeight, weightHistory, phaseWeights);
 
-    // Wireframe calls using one dummy element.
-    loadMockData(weightHistory, startingWeight);
-    displayMockHistory(weightHistory, startingWeight);
-
+    displayHistory(weightHistory, startingWeight, phaseWeights, finalWeight);
     return 0;
 }

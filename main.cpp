@@ -1,33 +1,29 @@
-// Progress save 1: calculation and category functions
+// Progress save 2: correct 30-day phase calculation
 #include <iostream>
+#include <string>
 
 using namespace std;
 
-const int DEFICIT = 0;
-const int BALANCED = 1;
-const int SURPLUS = 2;
-const double CALORIES_PER_POUND = 3500.0;
+const int SIMULATION_DAYS = 180;
+const int DAYS_PER_PHASE = 30;
 
-int classifyBalance(int balance) {
-    if (balance < -100) {
-        return DEFICIT;
+string getPhaseName(int day) {
+    if (day < 1 || day > SIMULATION_DAYS) {
+        return "Invalid day";
     }
-    if (balance <= 100) {
-        return BALANCED;
-    }
-    return SURPLUS;
-}
 
-double calculateWeightChange(int calorieBalance) {
-    return calorieBalance / CALORIES_PER_POUND;
+    int phase = (day - 1) / DAYS_PER_PHASE + 1;
+    int firstDay = (phase - 1) * DAYS_PER_PHASE + 1;
+    int lastDay = phase * DAYS_PER_PHASE;
+
+    return "Phase " + to_string(phase) + ": Days " +
+           to_string(firstDay) + "-" + to_string(lastDay);
 }
 
 int main() {
-    cout << "350 calorie change: "
-         << calculateWeightChange(350) << "\n";
-    cout << "-100 category: "
-         << classifyBalance(-100) << "\n";
-    cout << "101 category: "
-         << classifyBalance(101) << "\n";
+    cout << "Day 30: " << getPhaseName(30) << "\n";
+    cout << "Day 31: " << getPhaseName(31) << "\n";
+    cout << "Day 60: " << getPhaseName(60) << "\n";
+    cout << "Day 61: " << getPhaseName(61) << "\n";
     return 0;
 }

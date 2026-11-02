@@ -1,4 +1,4 @@
-// Progress save 4: strict CSV parsing and duplicate-day checks
+// Progress save 5: complete validation and day-order loading
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -60,16 +60,14 @@ bool parseDailyRecord(const string& line, DailyRecord& record) {
     }
 
     stringstream input(line);
-    string dayText;
-    string eatenText;
-    string burnedText;
-    getline(input, dayText, ',');
-    getline(input, eatenText, ',');
-    getline(input, burnedText);
+    string fields[3];
+    getline(input, fields[0], ',');
+    getline(input, fields[1], ',');
+    getline(input, fields[2]);
 
-    if (!parseInteger(dayText, record.day) ||
-        !parseInteger(eatenText, record.caloriesEaten) ||
-        !parseInteger(burnedText, record.caloriesBurned)) {
+    if (!parseInteger(fields[0], record.day) ||
+        !parseInteger(fields[1], record.caloriesEaten) ||
+        !parseInteger(fields[2], record.caloriesBurned)) {
         return false;
     }
 
@@ -81,10 +79,11 @@ bool parseDailyRecord(const string& line, DailyRecord& record) {
 bool loadDailyData(const string& filename, vector<DailyRecord>& records) {
     ifstream input(filename);
     if (!input) {
-        cerr << "Could not open input file.\n";
+        cerr << "Could not open " << filename << ".\n";
         return false;
     }
 
+    vector<DailyRecord> loaded;
     array<bool, SIMULATION_DAYS + 1> seen{};
     string line;
     int lineNumber = 0;
@@ -102,9 +101,26 @@ bool loadDailyData(const string& filename, vector<DailyRecord>& records) {
                  << lineNumber << ".\n";
             return false;
         }
+        if (record.caloriesEaten < 0 || record.caloriesBurned < 0) {
+            cerr << "Negative calories on line " << lineNumber << ".\n";
+            return false;
+        }
         seen[record.day] = true;
-        records.push_back(record);
+        loaded.push_back(record);
     }
+
+    for (int day = 1; day <= SIMULATION_DAYS; ++day) {
+        if (!seen[day]) {
+            cerr << "Input is missing day " << day << ".\n";
+            return false;
+        }
+    }
+
+    sort(loaded.begin(), loaded.end(),
+         [](const DailyRecord& left, const DailyRecord& right) {
+             return left.day < right.day;
+         });
+    records = loaded;
     return true;
 }
 
@@ -116,6 +132,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    cout << "Loaded " << records.size() << " unique records.\n";
+    cout << "Loaded days " << records.front().day
+         << " through " << records.back().day
+         << " in order.\n";
     return 0;
 }

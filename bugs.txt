@@ -1,7 +1,7 @@
-Beta Maintenance Bug Log - Progress Save 4
+Beta Maintenance Bug Log - Progress Save 5
 
-Next I added the external-file loader and tested malformed CSV fields and
-duplicate day numbers.
+I tested a copy of the input with records removed and rearranged. This save
+adds missing-day reporting and sorting before simulation.
 
 1. Weight changes were always zero for small calorie balances
 
@@ -40,3 +40,15 @@ record if conversion failed or extra data remained.
 Two records with the same day number passed the first version because the
 program only checked the total number of records. I added a 180-element seen
 array and reject a record when its day has already been marked as seen.
+
+7. An out-of-order input file produced the wrong running weight
+
+The simulation originally processed records in file order. When I moved day 4
+above day 3 in the test file, the displayed daily weights were out of order. I
+sorted the validated records by day before starting the simulation.
+
+8. A missing day was not reported clearly
+
+The loader could finish with fewer than 180 valid records but only displayed a
+general loading error. I added a final check for every day from 1 through 180
+and report the first missing day so the input file is easier to correct.

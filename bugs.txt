@@ -1,7 +1,7 @@
-Beta Maintenance Bug Log - Progress Save 3
+Beta Maintenance Bug Log - Progress Save 4
 
-After the phase tests passed, I checked values outside the valid 1-180 day
-range and prevented invalid records from being inserted into the map.
+Next I added the external-file loader and tested malformed CSV fields and
+duplicate day numbers.
 
 1. Weight changes were always zero for small calorie balances
 
@@ -27,3 +27,16 @@ days 30, 31, 60, and 61.
 Days 0 and 181 were passed to the phase function and could become keys in the
 map. I added a range check before inserting a record. The phase function now
 returns "Invalid day" when the day is outside 1 through 180.
+
+5. A malformed input line was partly accepted
+
+The first CSV reader checked only whether three values could be read. A line
+with missing fields or extra text could still get through. I split each line
+into exactly three fields, converted each complete field, and rejected the
+record if conversion failed or extra data remained.
+
+6. Duplicate days were counted as separate simulation days
+
+Two records with the same day number passed the first version because the
+program only checked the total number of records. I added a 180-element seen
+array and reject a record when its day has already been marked as seen.

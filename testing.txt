@@ -1,0 +1,15 @@
+Unit Testing Plan (first draft)
+
+I plan to test the smaller functions separately before I test the entire
+180-day simulation. The first functions I want to test are classifyBalance()
+and calculateWeightChange(). I will give them known inputs and compare their
+answers to the results I calculated by hand.
+
+I also need to test values near the category cutoffs because those values are
+more likely to reveal a mistake in an if statement. If a test fails, the test
+driver should print which value caused the problem.
+
+Driver program notes:
+
+I still need to decide whether to use assert statements or print pass/fail
+messages. Assert statements look shorter, so I will try those first.

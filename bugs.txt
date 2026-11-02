@@ -1,0 +1,17 @@
+Beta Maintenance Bug Log - Progress Save 1
+
+I started this log while testing the calculation and category functions. These
+are the first problems I found and corrected.
+
+1. Weight changes were always zero for small calorie balances
+
+While testing calculateWeightChange(), I originally divided two integers. A
+balance such as 350 calories returned 0 instead of 0.1. I corrected the
+calculation by dividing by 3500.0 so C++ uses floating-point division.
+
+2. The -100 calorie boundary was put in the wrong category
+
+My first condition used balance <= -100 for a deficit. The project definition
+says -100 through 100 is balanced, so the -100 test failed. I changed the
+deficit condition to balance < -100 and kept the balanced condition at
+balance <= 100.

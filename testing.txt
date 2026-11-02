@@ -1,0 +1,104 @@
+Unit Testing Plan
+
+I will unit test the functions separately before testing the full 180-day
+simulation. The first functions to test are classifyBalance(),
+calculateWeightChange(), and getPhaseName(). Each test will provide a known
+parameter and use an assertion to compare the return value with an expected
+result. This will verify that parameters are processed correctly and that each
+function returns the right value.
+
+For classifyBalance(), I will test normal values in all three categories and
+values immediately around the -100 and 100 cutoffs. For
+calculateWeightChange(), I will test negative, zero, and positive balances. I
+will also test a smaller value that produces a fractional pound result. Since
+that result is a double, I will compare it with a small tolerance instead of
+depending on exact equality. For getPhaseName(), I will check the first and
+last day of each phase. I will also pass days outside the valid 1-180 range to
+make sure the function always returns its default value, "Invalid day".
+
+Later, after the data-loading function is complete, I will use a small test
+input file containing valid records, a malformed record, a duplicate day, and
+days outside the allowed range. For the full simulation, I will confirm that a
+DailyRecord is placed into the correct private container data (the map's phase,
+array category, and list), and that its endingWeight matches the value returned
+by calculateWeightChange(). This checks the program's internal state as well as
+its displayed output.
+
+Correction made while testing:
+
+My first driver expected -100 to be DEFICIT. That assertion failed because the
+specification places -100 through 100 in BALANCED. I corrected the expected
+value and added -101 and 101 to make the intended boundary behavior clear. I
+also replaced exact comparisons for calculated fractional doubles with an
+almostEqual() helper.
+
+Final unit-test driver:
+
+```cpp
+#include <cassert>
+#include <cmath>
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+const int DEFICIT = 0;
+const int BALANCED = 1;
+const int SURPLUS = 2;
+
+int classifyBalance(int balance) {
+    if (balance < -100) return DEFICIT;
+    if (balance <= 100) return BALANCED;
+    return SURPLUS;
+}
+
+double calculateWeightChange(int calorieBalance) {
+    return calorieBalance / 3500.0;
+}
+
+string getPhaseName(int day) {
+    if (day < 1 || day > 180) return "Invalid day";
+    int phase = (day - 1) / 30 + 1;
+    int firstDay = (phase - 1) * 30 + 1;
+    int lastDay = phase * 30;
+    return "Phase " + to_string(phase) + ": Days " +
+           to_string(firstDay) + "-" + to_string(lastDay);
+}
+
+bool almostEqual(double left, double right) {
+    return fabs(left - right) < 0.000001;
+}
+
+int main() {
+    assert(classifyBalance(-500) == DEFICIT);
+    assert(classifyBalance(-101) == DEFICIT);
+    assert(classifyBalance(-100) == BALANCED);
+    assert(classifyBalance(0) == BALANCED);
+    assert(classifyBalance(100) == BALANCED);
+    assert(classifyBalance(101) == SURPLUS);
+    assert(classifyBalance(500) == SURPLUS);
+
+    assert(almostEqual(calculateWeightChange(-3500), -1.0));
+    assert(almostEqual(calculateWeightChange(0), 0.0));
+    assert(almostEqual(calculateWeightChange(350), 0.1));
+    assert(almostEqual(calculateWeightChange(3500), 1.0));
+
+    assert(getPhaseName(1) == "Phase 1: Days 1-30");
+    assert(getPhaseName(30) == "Phase 1: Days 1-30");
+    assert(getPhaseName(31) == "Phase 2: Days 31-60");
+    assert(getPhaseName(60) == "Phase 2: Days 31-60");
+    assert(getPhaseName(61) == "Phase 3: Days 61-90");
+    assert(getPhaseName(90) == "Phase 3: Days 61-90");
+    assert(getPhaseName(91) == "Phase 4: Days 91-120");
+    assert(getPhaseName(120) == "Phase 4: Days 91-120");
+    assert(getPhaseName(121) == "Phase 5: Days 121-150");
+    assert(getPhaseName(150) == "Phase 5: Days 121-150");
+    assert(getPhaseName(151) == "Phase 6: Days 151-180");
+    assert(getPhaseName(180) == "Phase 6: Days 151-180");
+    assert(getPhaseName(0) == "Invalid day");
+    assert(getPhaseName(181) == "Invalid day");
+
+    cout << "All unit tests passed.\n";
+    return 0;
+}
+```

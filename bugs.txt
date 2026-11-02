@@ -1,7 +1,7 @@
-Beta Maintenance Bug Log - Progress Save 5
+Beta Maintenance Bug Log - Progress Save 6
 
-I tested a copy of the input with records removed and rearranged. This save
-adds missing-day reporting and sorting before simulation.
+I added the simulation loop and traced the estimated weight from one day to
+the next. This save corrects the running-weight calculation.
 
 1. Weight changes were always zero for small calorie balances
 
@@ -52,3 +52,10 @@ sorted the validated records by day before starting the simulation.
 The loader could finish with fewer than 180 valid records but only displayed a
 general loading error. I added a final check for every day from 1 through 180
 and report the first missing day so the input file is easier to correct.
+
+9. Each daily weight was calculated from the starting weight
+
+In an early simulation loop, endingWeight was reset from startingWeight for
+every record. This prevented weight changes from accumulating across days. I
+created one runningWeight variable outside the loop and update it after each
+daily calorie balance.

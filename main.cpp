@@ -1,10 +1,16 @@
-// Progress save 5: complete validation and day-order loading
+// Progress save 6: running-weight simulation
+// Project: 180-Day Weight Change Simulation
+// Beta release
+
 #include <algorithm>
 #include <array>
 #include <cctype>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <limits>
+#include <list>
+#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -19,7 +25,16 @@ struct DailyRecord {
     double endingWeight;
 };
 
+const int DEFICIT = 0;
+const int BALANCED = 1;
+const int SURPLUS = 2;
+const int CATEGORY_COUNT = 3;
 const int SIMULATION_DAYS = 180;
+const int DAYS_PER_PHASE = 30;
+const double CALORIES_PER_POUND = 3500.0;
+
+using DayLists = array<list<DailyRecord>, CATEGORY_COUNT>;
+using WeightMap = map<string, DayLists>;
 
 string trim(const string& value) {
     size_t first = 0;
@@ -27,6 +42,7 @@ string trim(const string& value) {
            isspace(static_cast<unsigned char>(value[first]))) {
         ++first;
     }
+
     size_t last = value.size();
     while (last > first &&
            isspace(static_cast<unsigned char>(value[last - 1]))) {
@@ -37,7 +53,9 @@ string trim(const string& value) {
 
 bool parseInteger(const string& text, int& value) {
     string cleaned = trim(text);
-    if (cleaned.empty()) return false;
+    if (cleaned.empty()) {
+        return false;
+    }
 
     try {
         size_t used = 0;
@@ -60,14 +78,19 @@ bool parseDailyRecord(const string& line, DailyRecord& record) {
     }
 
     stringstream input(line);
-    string fields[3];
-    getline(input, fields[0], ',');
-    getline(input, fields[1], ',');
-    getline(input, fields[2]);
+    string dayText;
+    string eatenText;
+    string burnedText;
 
-    if (!parseInteger(fields[0], record.day) ||
-        !parseInteger(fields[1], record.caloriesEaten) ||
-        !parseInteger(fields[2], record.caloriesBurned)) {
+    if (!getline(input, dayText, ',') ||
+        !getline(input, eatenText, ',') ||
+        !getline(input, burnedText)) {
+        return false;
+    }
+
+    if (!parseInteger(dayText, record.day) ||
+        !parseInteger(eatenText, record.caloriesEaten) ||
+        !parseInteger(burnedText, record.caloriesBurned)) {
         return false;
     }
 
@@ -79,7 +102,7 @@ bool parseDailyRecord(const string& line, DailyRecord& record) {
 bool loadDailyData(const string& filename, vector<DailyRecord>& records) {
     ifstream input(filename);
     if (!input) {
-        cerr << "Could not open " << filename << ".\n";
+        cerr << "Error: could not open " << filename << ".\n";
         return false;
     }
 
@@ -91,27 +114,33 @@ bool loadDailyData(const string& filename, vector<DailyRecord>& records) {
     while (getline(input, line)) {
         ++lineNumber;
         DailyRecord record{};
+
         if (!parseDailyRecord(line, record)) {
-            cerr << "Malformed line " << lineNumber << ".\n";
+            cerr << "Error: malformed data on line " << lineNumber << ".\n";
             return false;
         }
-        if (record.day < 1 || record.day > SIMULATION_DAYS ||
-            seen[record.day]) {
-            cerr << "Invalid or duplicate day on line "
-                 << lineNumber << ".\n";
+        if (record.day < 1 || record.day > SIMULATION_DAYS) {
+            cerr << "Error: day " << record.day
+                 << " is outside the range 1-" << SIMULATION_DAYS << ".\n";
             return false;
         }
         if (record.caloriesEaten < 0 || record.caloriesBurned < 0) {
-            cerr << "Negative calories on line " << lineNumber << ".\n";
+            cerr << "Error: calorie values cannot be negative on line "
+                 << lineNumber << ".\n";
             return false;
         }
+        if (seen[record.day]) {
+            cerr << "Error: duplicate record for day " << record.day << ".\n";
+            return false;
+        }
+
         seen[record.day] = true;
         loaded.push_back(record);
     }
 
     for (int day = 1; day <= SIMULATION_DAYS; ++day) {
         if (!seen[day]) {
-            cerr << "Input is missing day " << day << ".\n";
+            cerr << "Error: input is missing day " << day << ".\n";
             return false;
         }
     }
@@ -120,20 +149,126 @@ bool loadDailyData(const string& filename, vector<DailyRecord>& records) {
          [](const DailyRecord& left, const DailyRecord& right) {
              return left.day < right.day;
          });
+
     records = loaded;
     return true;
 }
 
-int main(int argc, char* argv[]) {
-    string filename = argc > 1 ? argv[1] : "daily_data.csv";
-    vector<DailyRecord> records;
+int classifyBalance(int balance) {
+    if (balance < -100) {
+        return DEFICIT;
+    }
+    if (balance <= 100) {
+        return BALANCED;
+    }
+    return SURPLUS;
+}
 
+double calculateWeightChange(int calorieBalance) {
+    return calorieBalance / CALORIES_PER_POUND;
+}
+
+string getPhaseName(int day) {
+    if (day < 1 || day > SIMULATION_DAYS) {
+        return "Invalid day";
+    }
+
+    int phase = (day - 1) / DAYS_PER_PHASE + 1;
+    int firstDay = (phase - 1) * DAYS_PER_PHASE + 1;
+    int lastDay = phase * DAYS_PER_PHASE;
+
+    return "Phase " + to_string(phase) + ": Days " +
+           to_string(firstDay) + "-" + to_string(lastDay);
+}
+
+double simulateWeightChanges(const vector<DailyRecord>& inputRecords,
+                             double startingWeight,
+                             WeightMap& history,
+                             array<double, 6>& phaseWeights) {
+    history.clear();
+    phaseWeights.fill(startingWeight);
+    double runningWeight = startingWeight;
+
+    for (DailyRecord record : inputRecords) {
+        record.calorieBalance =
+            record.caloriesEaten - record.caloriesBurned;
+        runningWeight += calculateWeightChange(record.calorieBalance);
+        record.endingWeight = runningWeight;
+
+        string phase = getPhaseName(record.day);
+        int category = classifyBalance(record.calorieBalance);
+        history[phase][category].push_back(record);
+
+        if (record.day % DAYS_PER_PHASE == 0) {
+            phaseWeights[record.day / DAYS_PER_PHASE - 1] = runningWeight;
+        }
+    }
+
+    return runningWeight;
+}
+
+void displayHistory(const WeightMap& history,
+                    double startingWeight,
+                    const array<double, 6>& phaseWeights,
+                    double finalWeight) {
+    const array<string, CATEGORY_COUNT> labels = {
+        "Deficit", "Balanced", "Surplus"
+    };
+    array<int, CATEGORY_COUNT> totals{};
+
+    cout << fixed << setprecision(2);
+    cout << "Initial weight: " << startingWeight << " pounds\n";
+
+    for (const auto& phase : history) {
+        totals.fill(0);
+        cout << "\n" << phase.first << "\n";
+        for (int category = 0; category < CATEGORY_COUNT; ++category) {
+            cout << "  " << labels[category] << " days:\n";
+
+            if (phase.second[category].empty()) {
+                cout << "    none\n";
+                continue;
+            }
+
+            for (const DailyRecord& record : phase.second[category]) {
+                cout << "    Day " << setw(3) << record.day
+                     << ": eaten " << record.caloriesEaten
+                     << ", burned " << record.caloriesBurned
+                     << ", balance " << showpos << record.calorieBalance
+                     << noshowpos << ", weight " << record.endingWeight
+                     << "\n";
+                ++totals[category];
+            }
+        }
+    }
+
+    cout << "\n30-day progress:\n";
+    for (size_t phase = 0; phase < phaseWeights.size(); ++phase) {
+        cout << "  Day " << (phase + 1) * DAYS_PER_PHASE
+             << ": " << phaseWeights[phase] << " pounds\n";
+    }
+
+    cout << "\nFinal estimated weight: " << finalWeight << " pounds\n";
+    cout << "Category totals:\n";
+    cout << "  Deficit days: " << totals[DEFICIT] << "\n";
+    cout << "  Balanced days: " << totals[BALANCED] << "\n";
+    cout << "  Surplus days: " << totals[SURPLUS] << "\n";
+}
+
+int main(int argc, char* argv[]) {
+    const string filename = argc > 1 ? argv[1] : "daily_data.csv";
+    const double startingWeight = 200.0;
+
+    vector<DailyRecord> records;
     if (!loadDailyData(filename, records)) {
         return 1;
     }
 
-    cout << "Loaded days " << records.front().day
-         << " through " << records.back().day
-         << " in order.\n";
+    WeightMap weightHistory;
+    array<double, 6> phaseWeights{};
+    double finalWeight = simulateWeightChanges(
+        records, startingWeight, weightHistory, phaseWeights);
+
+    displayHistory(weightHistory, startingWeight, phaseWeights, finalWeight);
     return 0;
 }

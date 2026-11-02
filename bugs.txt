@@ -1,7 +1,7 @@
-Beta Maintenance Bug Log - Progress Save 2
+Beta Maintenance Bug Log - Progress Save 3
 
-I next tested the phase formula at the borders between 30-day periods. This
-save adds the phase-boundary correction to the first two function fixes.
+After the phase tests passed, I checked values outside the valid 1-180 day
+range and prevented invalid records from being inserted into the map.
 
 1. Weight changes were always zero for small calorie balances
 
@@ -21,3 +21,9 @@ balance <= 100.
 I first calculated the phase with day / 30 + 1. That made day 30 start the
 second phase. I changed the formula to (day - 1) / 30 + 1 and added tests for
 days 30, 31, 60, and 61.
+
+4. Invalid day numbers created an extra map entry
+
+Days 0 and 181 were passed to the phase function and could become keys in the
+map. I added a range check before inserting a record. The phase function now
+returns "Invalid day" when the day is outside 1 through 180.

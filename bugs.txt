@@ -1,7 +1,7 @@
-Beta Maintenance Bug Log - Progress Save 6
+Beta Maintenance Bug Log - Progress Save 7
 
-I added the simulation loop and traced the estimated weight from one day to
-the next. This save corrects the running-weight calculation.
+I finished the display and tested totals across all six phases. The beta
+maintenance log now contains all ten bugs and their corrections.
 
 1. Weight changes were always zero for small calorie balances
 
@@ -59,3 +59,10 @@ In an early simulation loop, endingWeight was reset from startingWeight for
 every record. This prevented weight changes from accumulating across days. I
 created one runningWeight variable outside the loop and update it after each
 daily calorie balance.
+
+10. Category totals reset at the beginning of every phase
+
+I declared the deficit, balanced, and surplus counters inside the phase display
+loop, so the final totals only described the last phase. I moved all three
+counters outside that loop and increment them while visiting every stored
+record.

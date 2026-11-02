@@ -1,4 +1,4 @@
-// Progress save 6: running-weight simulation
+// Progress save 7: complete beta release
 // Project: 180-Day Weight Change Simulation
 // Beta release
 
@@ -220,7 +220,6 @@ void displayHistory(const WeightMap& history,
     cout << "Initial weight: " << startingWeight << " pounds\n";
 
     for (const auto& phase : history) {
-        totals.fill(0);
         cout << "\n" << phase.first << "\n";
         for (int category = 0; category < CATEGORY_COUNT; ++category) {
             cout << "  " << labels[category] << " days:\n";

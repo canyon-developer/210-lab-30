@@ -4,7 +4,8 @@ I will unit test the functions separately before testing the full 180-day
 simulation. The first functions to test are classifyBalance(),
 calculateWeightChange(), and getPhaseName(). Each test will provide a known
 parameter and use an assertion to compare the return value with an expected
-result.
+result. This will verify that parameters are processed correctly and that each
+function returns the right value.
 
 For classifyBalance(), I will test normal values in all three categories and
 values immediately around the -100 and 100 cutoffs. For
@@ -12,8 +13,16 @@ calculateWeightChange(), I will test negative, zero, and positive balances. I
 will also test a smaller value that produces a fractional pound result. Since
 that result is a double, I will compare it with a small tolerance instead of
 depending on exact equality. For getPhaseName(), I will check the first and
-last day of a phase and invalid days. Invalid input should always return the
-default value "Invalid day".
+last day of each phase. I will also pass days outside the valid 1-180 range to
+make sure the function always returns its default value, "Invalid day".
+
+Later, after the data-loading function is complete, I will use a small test
+input file containing valid records, a malformed record, a duplicate day, and
+days outside the allowed range. For the full simulation, I will confirm that a
+DailyRecord is placed into the correct private container data (the map's phase,
+array category, and list), and that its endingWeight matches the value returned
+by calculateWeightChange(). This checks the program's internal state as well as
+its displayed output.
 
 Correction made while testing:
 
@@ -23,7 +32,7 @@ value and added -101 and 101 to make the intended boundary behavior clear. I
 also replaced exact comparisons for calculated fractional doubles with an
 almostEqual() helper.
 
-Expanded unit-test driver:
+Final unit-test driver:
 
 ```cpp
 #include <cassert>
@@ -77,6 +86,14 @@ int main() {
     assert(getPhaseName(1) == "Phase 1: Days 1-30");
     assert(getPhaseName(30) == "Phase 1: Days 1-30");
     assert(getPhaseName(31) == "Phase 2: Days 31-60");
+    assert(getPhaseName(60) == "Phase 2: Days 31-60");
+    assert(getPhaseName(61) == "Phase 3: Days 61-90");
+    assert(getPhaseName(90) == "Phase 3: Days 61-90");
+    assert(getPhaseName(91) == "Phase 4: Days 91-120");
+    assert(getPhaseName(120) == "Phase 4: Days 91-120");
+    assert(getPhaseName(121) == "Phase 5: Days 121-150");
+    assert(getPhaseName(150) == "Phase 5: Days 121-150");
+    assert(getPhaseName(151) == "Phase 6: Days 151-180");
     assert(getPhaseName(180) == "Phase 6: Days 151-180");
     assert(getPhaseName(0) == "Invalid day");
     assert(getPhaseName(181) == "Invalid day");

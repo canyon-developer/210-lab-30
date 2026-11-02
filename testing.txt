@@ -1,23 +1,57 @@
-Unit Testing Plan (second draft)
+Unit Testing Plan
 
 I plan to test the smaller functions separately before I test the entire
 180-day simulation. The first functions I want to test are classifyBalance()
 and calculateWeightChange(). I will give them known inputs and compare their
-answers to results I calculated by hand.
+answers to the results I calculated by hand.
 
-For classifyBalance(), I should test one normal deficit value, one balanced
-value, and one surplus value. I also need to check the exact category cutoffs.
-For calculateWeightChange(), I should use calorie balances with easy expected
-answers, such as -3,500, 0, and 3,500.
+For classifyBalance(), I will test an ordinary deficit, balanced, and surplus
+value. I will also test -100 and 100 because they are the exact boundary values.
+For calculateWeightChange(), I will test a deficit, a surplus, and zero. A
+negative balance should return a negative change, a positive balance should
+return a positive change, and zero should return 0.0. Using 3,500 and -3,500
+makes the expected results easy to check because they should be 1.0 and -1.0.
 
-Driver program outline:
+First unit-test driver draft:
 
-1. Include the assert and iostream libraries.
-2. Call classifyBalance() with test values from all three categories.
-3. Call calculateWeightChange() with negative, zero, and positive values.
-4. Print a message at the end so I know every assertion passed.
+```cpp
+#include <cassert>
+#include <iostream>
 
-I will write the first working version of this driver next. At first I will
-copy the small function definitions into the test driver so it can run by
-itself. When the full project is organized into separate files, the test driver
-can include the function declarations instead.
+using namespace std;
+
+const int DEFICIT = 0;
+const int BALANCED = 1;
+const int SURPLUS = 2;
+
+int classifyBalance(int balance) {
+    if (balance < -100) {
+        return DEFICIT;
+    }
+    if (balance <= 100) {
+        return BALANCED;
+    }
+    return SURPLUS;
+}
+
+double calculateWeightChange(int calorieBalance) {
+    return calorieBalance / 3500.0;
+}
+
+int main() {
+    assert(classifyBalance(-500) == DEFICIT);
+    assert(classifyBalance(0) == BALANCED);
+    assert(classifyBalance(500) == SURPLUS);
+
+    // Check the two boundary values.
+    assert(classifyBalance(-100) == DEFICIT);
+    assert(classifyBalance(100) == BALANCED);
+
+    assert(calculateWeightChange(-3500) == -1.0);
+    assert(calculateWeightChange(0) == 0.0);
+    assert(calculateWeightChange(3500) == 1.0);
+
+    cout << "All unit tests passed.\n";
+    return 0;
+}
+```

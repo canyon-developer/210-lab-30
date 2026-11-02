@@ -1,15 +1,23 @@
-Unit Testing Plan (first draft)
+Unit Testing Plan (second draft)
 
 I plan to test the smaller functions separately before I test the entire
 180-day simulation. The first functions I want to test are classifyBalance()
 and calculateWeightChange(). I will give them known inputs and compare their
-answers to the results I calculated by hand.
+answers to results I calculated by hand.
 
-I also need to test values near the category cutoffs because those values are
-more likely to reveal a mistake in an if statement. If a test fails, the test
-driver should print which value caused the problem.
+For classifyBalance(), I should test one normal deficit value, one balanced
+value, and one surplus value. I also need to check the exact category cutoffs.
+For calculateWeightChange(), I should use calorie balances with easy expected
+answers, such as -3,500, 0, and 3,500.
 
-Driver program notes:
+Driver program outline:
 
-I still need to decide whether to use assert statements or print pass/fail
-messages. Assert statements look shorter, so I will try those first.
+1. Include the assert and iostream libraries.
+2. Call classifyBalance() with test values from all three categories.
+3. Call calculateWeightChange() with negative, zero, and positive values.
+4. Print a message at the end so I know every assertion passed.
+
+I will write the first working version of this driver next. At first I will
+copy the small function definitions into the test driver so it can run by
+itself. When the full project is organized into separate files, the test driver
+can include the function declarations instead.
